@@ -9,7 +9,8 @@ from pytz import timezone
 
 SCOPES = [
     "https://www.googleapis.com/auth/youtube",
-    "https://www.googleapis.com/auth/youtube.force-ssl"
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+    "https://www.googleapis.com/auth/youtube.readonly"
 ]
 
 def get_authenticated_service():
@@ -80,31 +81,50 @@ def start_broadcast(youtube, broadcast_id):
 def change_broadcast_visibility(youtube, broadcast_id, privacy_status="public"):
     """Change broadcast visibility from private to public"""
     try:
-        request = youtube.liveBroadcasts().get(
+        print(f"🔍 Getting broadcast details for ID: {broadcast_id}")
+        
+        # Get current broadcast details using the correct API method
+        get_response = youtube.liveBroadcasts().get(
             part="id,snippet,status",
             id=broadcast_id
-        )
-        response = request.execute()
+        ).execute()
         
-        if not response.get("items"):
+        print(f"📋 API Response: {get_response}")
+        
+        if not get_response.get("items"):
             print(f"❌ Broadcast {broadcast_id} not found")
             return False
             
-        broadcast = response["items"][0]
+        broadcast = get_response["items"][0]
+        current_privacy = broadcast["status"].get("privacyStatus", "unknown")
+        broadcast_title = broadcast["snippet"].get("title", "Unknown")
         
+        print(f"📺 Broadcast: '{broadcast_title}'")
+        print(f"📋 Current privacy status: {current_privacy}")
+        
+        if current_privacy == privacy_status:
+            print(f"ℹ️  Privacy status is already {privacy_status}, no change needed")
+            return True
+        
+        # Update the privacy status
         broadcast["status"]["privacyStatus"] = privacy_status
         
-        update_request = youtube.liveBroadcasts().update(
+        print(f"🔄 Updating privacy status to {privacy_status}...")
+        
+        # Update the broadcast using the correct API method
+        update_response = youtube.liveBroadcasts().update(
             part="id,snippet,status",
             body=broadcast
-        )
-        update_response = update_request.execute()
+        ).execute()
         
-        print(f"✅ Broadcast visibility changed to {privacy_status}: {broadcast_id}")
+        print(f"✅ Broadcast visibility changed from {current_privacy} to {privacy_status}: {broadcast_id}")
         return True
         
     except Exception as e:
         print(f"❌ Error changing broadcast visibility: {e}")
+        print(f"   Error type: {type(e).__name__}")
+        import traceback
+        print(f"   Traceback: {traceback.format_exc()}")
         return False
 
 
