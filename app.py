@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     keyword = "인천순복음교회 성령충만기도회"
     
-    test_mode = True
+    test_mode = False
 
     print(f"🧪 Test mode: {'ON' if test_mode else 'OFF'}")
     broadcast_id = find_broadcast(youtube, keyword, test_mode=test_mode)
