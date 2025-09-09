@@ -4,6 +4,7 @@ from google.auth.transport.requests import Request
 import pickle, os
 import datetime
 import time
+import argparse
 from pytz import timezone
 
 SCOPES = [
@@ -127,27 +128,93 @@ def wait_until_scheduled_time(target_hour, target_minute, action_description):
     return True
 
 
-if __name__ == "__main__":
-    youtube = get_authenticated_service()
+def parse_time_string(time_str):
+    """Parse time string in format 'HH:MM' and return hour, minute"""
+    try:
+        hour, minute = map(int, time_str.split(':'))
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError("Invalid time range")
+        return hour, minute
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(f"Invalid time format '{time_str}'. Use HH:MM format (e.g., 19:30)")
 
-    keyword = "인천순복음교회 성령충만기도회"
+def main():
+    parser = argparse.ArgumentParser(
+        description="YouTube Live Autostart - Automatically manage broadcast visibility and streaming",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Use default times (7:30 PM visibility, 7:44 PM stream start)
+  python app.py
+
+  # Custom times for testing
+  python app.py --visibility-time 19:30 --stream-time 19:44
+
+  # Test with different keyword
+  python app.py --keyword "테스트 방송" --visibility-time 20:00 --stream-time 20:15
+
+  # Enable test mode (searches all broadcast statuses)
+  python app.py --test-mode
+        """
+    )
     
-    test_mode = False
-
-    print(f"🧪 Test mode: {'ON' if test_mode else 'OFF'}")
-    broadcast_id = find_broadcast(youtube, keyword, test_mode=test_mode)
+    parser.add_argument(
+        '--visibility-time', 
+        type=parse_time_string,
+        default=(19, 30),
+        help='Time to change visibility from private to public (default: 19:30)'
+    )
+    
+    parser.add_argument(
+        '--stream-time',
+        type=parse_time_string, 
+        default=(19, 44),
+        help='Time to start streaming (default: 19:44)'
+    )
+    
+    parser.add_argument(
+        '--keyword',
+        type=str,
+        default="인천순복음교회 성령충만기도회",
+        help='Keyword to search for in broadcast titles (default: "인천순복음교회 성령충만기도회")'
+    )
+    
+    parser.add_argument(
+        '--test-mode',
+        action='store_true',
+        help='Enable test mode (searches all broadcast statuses including live/active)'
+    )
+    
+    args = parser.parse_args()
+    
+    # Extract times
+    visibility_hour, visibility_minute = args.visibility_time
+    stream_hour, stream_minute = args.stream_time
+    
+    print("🚀 YouTube Live Autostart")
+    print("=" * 50)
+    print(f"🔍 Keyword: {args.keyword}")
+    print(f"🔓 Visibility change: {visibility_hour:02d}:{visibility_minute:02d} KST")
+    print(f"🎬 Stream start: {stream_hour:02d}:{stream_minute:02d} KST")
+    print(f"🧪 Test mode: {'ON' if args.test_mode else 'OFF'}")
+    print("=" * 50)
+    
+    youtube = get_authenticated_service()
+    broadcast_id = find_broadcast(youtube, args.keyword, test_mode=args.test_mode)
     
     if broadcast_id:
         print("📋 Found broadcast, starting automated workflow...")
         
-        print("⏰ Step 1: Waiting until 7:30 PM KST to change visibility to public...")
-        wait_until_scheduled_time(19, 30, "visibility change to public")
+        # Step 1: Wait until visibility time to change from private to public
+        print(f"⏰ Step 1: Waiting until {visibility_hour:02d}:{visibility_minute:02d} KST to change visibility to public...")
+        wait_until_scheduled_time(visibility_hour, visibility_minute, "visibility change to public")
         
         print("🔓 Changing broadcast visibility from private to public...")
         change_broadcast_visibility(youtube, broadcast_id, "public")
         
-        print("⏰ Step 2: Waiting until 7:44 PM KST to start streaming...")
-        wait_until_scheduled_time(19, 44, "stream start")
+        # Step 2: Wait until stream time to start streaming
+        print(f"⏰ Step 2: Waiting until {stream_hour:02d}:{stream_minute:02d} KST to start streaming...")
+        wait_until_scheduled_time(stream_hour, stream_minute, "stream start")
         
         print("🎬 Starting broadcast...")
         start_broadcast(youtube, broadcast_id)
@@ -155,3 +222,6 @@ if __name__ == "__main__":
         print("✅ All tasks completed successfully!")
     else:
         print("❌ No broadcast found to process.")
+
+if __name__ == "__main__":
+    main()
