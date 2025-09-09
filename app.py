@@ -83,8 +83,8 @@ def change_broadcast_visibility(youtube, broadcast_id, privacy_status="public"):
     try:
         print(f"🔍 Getting broadcast details for ID: {broadcast_id}")
         
-        # Get current broadcast details using the correct API method
-        get_response = youtube.liveBroadcasts().get(
+        # Get current broadcast details using list method with specific ID
+        get_response = youtube.liveBroadcasts().list(
             part="id,snippet,status",
             id=broadcast_id
         ).execute()
