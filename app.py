@@ -2,6 +2,9 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import pickle, os
+import datetime
+import time
+from pytz import timezone
 
 SCOPES = [
     "https://www.googleapis.com/auth/youtube",
@@ -73,6 +76,62 @@ def start_broadcast(youtube, broadcast_id):
         print(f"❌ Error starting broadcast: {e}")
 
 
+def change_broadcast_visibility(youtube, broadcast_id, privacy_status="public"):
+    """Change broadcast visibility from private to public"""
+    try:
+        # First get the current broadcast details
+        request = youtube.liveBroadcasts().get(
+            part="id,snippet,status",
+            id=broadcast_id
+        )
+        response = request.execute()
+        
+        if not response.get("items"):
+            print(f"❌ Broadcast {broadcast_id} not found")
+            return False
+            
+        broadcast = response["items"][0]
+        
+        # Update the privacy status
+        broadcast["status"]["privacyStatus"] = privacy_status
+        
+        # Update the broadcast
+        update_request = youtube.liveBroadcasts().update(
+            part="id,snippet,status",
+            body=broadcast
+        )
+        update_response = update_request.execute()
+        
+        print(f"✅ Broadcast visibility changed to {privacy_status}: {broadcast_id}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error changing broadcast visibility: {e}")
+        return False
+
+
+def wait_until_scheduled_time(target_hour=19, target_minute=30):
+    """Wait until the scheduled time (7:30 PM KST)"""
+    korea_tz = timezone('Asia/Seoul')
+    
+    while True:
+        now_korea = datetime.datetime.now(korea_tz)
+        current_hour = now_korea.hour
+        current_minute = now_korea.minute
+        
+        print(f"🕐 Current time (KST): {now_korea.strftime('%H:%M:%S')}")
+        
+        # Check if it's time to change visibility
+        if current_hour >= target_hour and current_minute >= target_minute:
+            print(f"⏰ Scheduled time reached! ({target_hour}:{target_minute:02d})")
+            break
+            
+        # Wait 30 seconds before checking again
+        time.sleep(30)
+    
+    return True
+
+
 if __name__ == "__main__":
     youtube = get_authenticated_service()
 
@@ -82,5 +141,17 @@ if __name__ == "__main__":
 
     print(f"🧪 Test mode: {'ON' if test_mode else 'OFF'}")
     broadcast_id = find_broadcast(youtube, keyword, test_mode=test_mode)
+    
     if broadcast_id:
+        print("🎬 Starting broadcast...")
         start_broadcast(youtube, broadcast_id)
+        
+        print("⏰ Waiting until 7:30 PM KST to change visibility to public...")
+        wait_until_scheduled_time(target_hour=19, target_minute=30)
+        
+        print("🔓 Changing broadcast visibility from private to public...")
+        change_broadcast_visibility(youtube, broadcast_id, "public")
+        
+        print("✅ All tasks completed successfully!")
+    else:
+        print("❌ No broadcast found to process.")
