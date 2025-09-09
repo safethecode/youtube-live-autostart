@@ -78,6 +78,22 @@ def start_broadcast(youtube, broadcast_id):
         print(f"❌ Error starting broadcast: {e}")
 
 
+def end_broadcast(youtube, broadcast_id):
+    """End the live broadcast"""
+    try:
+        request = youtube.liveBroadcasts().transition(
+            broadcastStatus="complete",
+            id=broadcast_id,
+            part="id,snippet,status"
+        )
+        response = request.execute()
+        print("🛑 Broadcast ended:", response["id"])
+        return True
+    except Exception as e:
+        print(f"❌ Error ending broadcast: {e}")
+        return False
+
+
 def change_broadcast_visibility(youtube, broadcast_id, privacy_status="public"):
     """Change broadcast visibility from private to public"""
     try:
@@ -161,14 +177,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Use default times (7:30 PM visibility, 7:44 PM stream start)
+  # Use default times (7:30 PM visibility, 7:44 PM stream start, 9:30 PM end)
   python app.py
 
   # Custom times for testing
-  python app.py --visibility-time 19:30 --stream-time 19:44
+  python app.py --visibility-time 19:30 --stream-time 19:44 --end-time 21:30
 
-  # Test with different keyword
-  python app.py --keyword "테스트 방송" --visibility-time 20:00 --stream-time 20:15
+  # Test with different keyword and custom end time
+  python app.py --keyword "테스트 방송" --visibility-time 20:00 --stream-time 20:15 --end-time 22:00
 
   # Enable test mode (searches all broadcast statuses)
   python app.py --test-mode
@@ -197,6 +213,13 @@ Examples:
     )
     
     parser.add_argument(
+        '--end-time',
+        type=parse_time_string,
+        default=(21, 30),
+        help='Time to end stream and change visibility to private (default: 21:30)'
+    )
+    
+    parser.add_argument(
         '--test-mode',
         action='store_true',
         help='Enable test mode (searches all broadcast statuses including live/active)'
@@ -206,12 +229,14 @@ Examples:
     
     visibility_hour, visibility_minute = args.visibility_time
     stream_hour, stream_minute = args.stream_time
+    end_hour, end_minute = args.end_time
     
     print("🚀 YouTube Live Autostart")
     print("=" * 50)
     print(f"🔍 Keyword: {args.keyword}")
     print(f"🔓 Visibility change: {visibility_hour:02d}:{visibility_minute:02d} KST")
     print(f"🎬 Stream start: {stream_hour:02d}:{stream_minute:02d} KST")
+    print(f"🛑 Stream end: {end_hour:02d}:{end_minute:02d} KST")
     print(f"🧪 Test mode: {'ON' if args.test_mode else 'OFF'}")
     print("=" * 50)
     
@@ -221,17 +246,29 @@ Examples:
     if broadcast_id:
         print("📋 Found broadcast, starting automated workflow...")
         
+        # Step 1: Wait until visibility time to change from private to public
         print(f"⏰ Step 1: Waiting until {visibility_hour:02d}:{visibility_minute:02d} KST to change visibility to public...")
         wait_until_scheduled_time(visibility_hour, visibility_minute, "visibility change to public")
         
         print("🔓 Changing broadcast visibility from private to public...")
         change_broadcast_visibility(youtube, broadcast_id, "public")
         
+        # Step 2: Wait until stream time to start streaming
         print(f"⏰ Step 2: Waiting until {stream_hour:02d}:{stream_minute:02d} KST to start streaming...")
         wait_until_scheduled_time(stream_hour, stream_minute, "stream start")
         
         print("🎬 Starting broadcast...")
         start_broadcast(youtube, broadcast_id)
+        
+        # Step 3: Wait until end time to end stream and change visibility to private
+        print(f"⏰ Step 3: Waiting until {end_hour:02d}:{end_minute:02d} KST to end stream and change visibility to private...")
+        wait_until_scheduled_time(end_hour, end_minute, "stream end and visibility change to private")
+        
+        print("🛑 Ending broadcast...")
+        end_broadcast(youtube, broadcast_id)
+        
+        print("🔒 Changing broadcast visibility from public to private...")
+        change_broadcast_visibility(youtube, broadcast_id, "private")
         
         print("✅ All tasks completed successfully!")
     else:
