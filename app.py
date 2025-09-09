@@ -246,21 +246,18 @@ Examples:
     if broadcast_id:
         print("📋 Found broadcast, starting automated workflow...")
         
-        # Step 1: Wait until visibility time to change from private to public
         print(f"⏰ Step 1: Waiting until {visibility_hour:02d}:{visibility_minute:02d} KST to change visibility to public...")
         wait_until_scheduled_time(visibility_hour, visibility_minute, "visibility change to public")
         
         print("🔓 Changing broadcast visibility from private to public...")
         change_broadcast_visibility(youtube, broadcast_id, "public")
         
-        # Step 2: Wait until stream time to start streaming
         print(f"⏰ Step 2: Waiting until {stream_hour:02d}:{stream_minute:02d} KST to start streaming...")
         wait_until_scheduled_time(stream_hour, stream_minute, "stream start")
         
         print("🎬 Starting broadcast...")
         start_broadcast(youtube, broadcast_id)
         
-        # Step 3: Wait until end time to end stream and change visibility to private
         print(f"⏰ Step 3: Waiting until {end_hour:02d}:{end_minute:02d} KST to end stream and change visibility to private...")
         wait_until_scheduled_time(end_hour, end_minute, "stream end and visibility change to private")
         
