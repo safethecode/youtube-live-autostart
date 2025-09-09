@@ -83,7 +83,6 @@ def change_broadcast_visibility(youtube, broadcast_id, privacy_status="public"):
     try:
         print(f"🔍 Getting broadcast details for ID: {broadcast_id}")
         
-        # Get current broadcast details using list method with specific ID
         get_response = youtube.liveBroadcasts().list(
             part="id,snippet,status",
             id=broadcast_id
@@ -106,12 +105,10 @@ def change_broadcast_visibility(youtube, broadcast_id, privacy_status="public"):
             print(f"ℹ️  Privacy status is already {privacy_status}, no change needed")
             return True
         
-        # Update the privacy status
         broadcast["status"]["privacyStatus"] = privacy_status
         
         print(f"🔄 Updating privacy status to {privacy_status}...")
         
-        # Update the broadcast using the correct API method
         update_response = youtube.liveBroadcasts().update(
             part="id,snippet,status",
             body=broadcast
@@ -143,7 +140,7 @@ def wait_until_scheduled_time(target_hour, target_minute, action_description):
             print(f"⏰ Scheduled time reached! ({target_hour}:{target_minute:02d}) - {action_description}")
             break
             
-        time.sleep(30)
+        time.sleep(10)
     
     return True
 
@@ -207,7 +204,6 @@ Examples:
     
     args = parser.parse_args()
     
-    # Extract times
     visibility_hour, visibility_minute = args.visibility_time
     stream_hour, stream_minute = args.stream_time
     
@@ -225,14 +221,12 @@ Examples:
     if broadcast_id:
         print("📋 Found broadcast, starting automated workflow...")
         
-        # Step 1: Wait until visibility time to change from private to public
         print(f"⏰ Step 1: Waiting until {visibility_hour:02d}:{visibility_minute:02d} KST to change visibility to public...")
         wait_until_scheduled_time(visibility_hour, visibility_minute, "visibility change to public")
         
         print("🔓 Changing broadcast visibility from private to public...")
         change_broadcast_visibility(youtube, broadcast_id, "public")
         
-        # Step 2: Wait until stream time to start streaming
         print(f"⏰ Step 2: Waiting until {stream_hour:02d}:{stream_minute:02d} KST to start streaming...")
         wait_until_scheduled_time(stream_hour, stream_minute, "stream start")
         
