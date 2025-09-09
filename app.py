@@ -79,7 +79,6 @@ def start_broadcast(youtube, broadcast_id):
 def change_broadcast_visibility(youtube, broadcast_id, privacy_status="public"):
     """Change broadcast visibility from private to public"""
     try:
-        # First get the current broadcast details
         request = youtube.liveBroadcasts().get(
             part="id,snippet,status",
             id=broadcast_id
@@ -92,10 +91,8 @@ def change_broadcast_visibility(youtube, broadcast_id, privacy_status="public"):
             
         broadcast = response["items"][0]
         
-        # Update the privacy status
         broadcast["status"]["privacyStatus"] = privacy_status
         
-        # Update the broadcast
         update_request = youtube.liveBroadcasts().update(
             part="id,snippet,status",
             body=broadcast
@@ -110,8 +107,8 @@ def change_broadcast_visibility(youtube, broadcast_id, privacy_status="public"):
         return False
 
 
-def wait_until_scheduled_time(target_hour=19, target_minute=30):
-    """Wait until the scheduled time (7:30 PM KST)"""
+def wait_until_scheduled_time(target_hour, target_minute, action_description):
+    """Wait until the scheduled time and return when reached"""
     korea_tz = timezone('Asia/Seoul')
     
     while True:
@@ -119,14 +116,12 @@ def wait_until_scheduled_time(target_hour=19, target_minute=30):
         current_hour = now_korea.hour
         current_minute = now_korea.minute
         
-        print(f"🕐 Current time (KST): {now_korea.strftime('%H:%M:%S')}")
+        print(f"🕐 Current time (KST): {now_korea.strftime('%H:%M:%S')} - Waiting for {action_description} at {target_hour}:{target_minute:02d}")
         
-        # Check if it's time to change visibility
         if current_hour >= target_hour and current_minute >= target_minute:
-            print(f"⏰ Scheduled time reached! ({target_hour}:{target_minute:02d})")
+            print(f"⏰ Scheduled time reached! ({target_hour}:{target_minute:02d}) - {action_description}")
             break
             
-        # Wait 30 seconds before checking again
         time.sleep(30)
     
     return True
@@ -143,14 +138,19 @@ if __name__ == "__main__":
     broadcast_id = find_broadcast(youtube, keyword, test_mode=test_mode)
     
     if broadcast_id:
-        print("🎬 Starting broadcast...")
-        start_broadcast(youtube, broadcast_id)
+        print("📋 Found broadcast, starting automated workflow...")
         
-        print("⏰ Waiting until 7:30 PM KST to change visibility to public...")
-        wait_until_scheduled_time(target_hour=19, target_minute=30)
+        print("⏰ Step 1: Waiting until 7:30 PM KST to change visibility to public...")
+        wait_until_scheduled_time(19, 30, "visibility change to public")
         
         print("🔓 Changing broadcast visibility from private to public...")
         change_broadcast_visibility(youtube, broadcast_id, "public")
+        
+        print("⏰ Step 2: Waiting until 7:44 PM KST to start streaming...")
+        wait_until_scheduled_time(19, 44, "stream start")
+        
+        print("🎬 Starting broadcast...")
+        start_broadcast(youtube, broadcast_id)
         
         print("✅ All tasks completed successfully!")
     else:
