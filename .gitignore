@@ -209,3 +209,7 @@ __marimo__/
 # Token
 token.pickle
 client_secret.json
+
+# Background process files
+youtube_autostart.log
+youtube_autostart.pid
